@@ -1,5 +1,6 @@
 #![feature(drain_filter)]
 
+use std::ops::Add;
 use std::time::Duration;
 use nannou::noise::*;
 use nannou::prelude::*;
@@ -8,8 +9,8 @@ use nannou_utils::{draw_background_grid, get_random_blue, get_random_color, get_
 use nannou_utils::particle::Particle;
 //use ;
 
-const PARTICLE_COUNT: usize = 1000;
-const PLATFORM_COUNT: usize = 10;
+const PARTICLE_COUNT: usize = 5000;
+const PLATFORM_COUNT: usize = 1;
 
 const SPEED: f64 = 0.5;
 
@@ -81,11 +82,9 @@ fn on_resize(_app: &App, model: &mut Model, new_size: Vec2) {
 
 fn draw_fn(draw: &Draw, location: Vec2, color: Srgba<u8>) {
     let mut stroke = get_random_retro(Some(100));
-    draw.ellipse()
-        .xy(location)
-        .radius(random_range(2., 5.))
-        .stroke(color)
-        .stroke_weight(2.)
+    draw.line()
+        .start(location)
+        .end(location.add(Vec2::new(0., 10.)))
         .color(stroke);
 }
 
@@ -136,12 +135,23 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     model.explosions.iter_mut().for_each(|v| {
         v.r += 3. / app.time;
         v.color.alpha -= 5;
+    });
+    let sine = app.time.sin();
+    let slower_sine =  (app.time / 2.0).sin();
+    model.platforms.par_iter_mut().for_each(|p| {
+        // Map the sine wave functions to ranges between the boundaries of the window
+        let x = map_range(sine, -1.0, 1.0, r.left(), r.right());
+        let y = map_range(slower_sine, -1.0, 1.0, r.bottom(), r.top());
+        let rt_x = x;
+        let rt_y = y;
+        let r = Rect::from_x_y_w_h(rt_x, rt_y, p.rect.w(), p.rect.h());
+        p.rect = r;
     })
 }
 
 fn update_particle(particle: &mut Particle, explosions: &mut Vec<Circle>, size: Vec2) {
     let mut color = particle.color();
-    color.alpha = 100;
+    color.alpha = 150;
     explosions.push(Circle {
         position: particle.location(),
         r: 5.,
