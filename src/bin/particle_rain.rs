@@ -1,3 +1,6 @@
+#![feature(drain_filter)]
+
+use std::time::Duration;
 use nannou::noise::*;
 use nannou::prelude::*;
 use rayon::prelude::*;
@@ -5,7 +8,7 @@ use nannou_utils::{draw_background_grid, get_random_blue, get_random_color, get_
 use nannou_utils::particle::Particle;
 //use ;
 
-const PARTICLE_COUNT: usize = 3000;
+const PARTICLE_COUNT: usize = 1000;
 
 const SPEED: f64 = 0.5;
 
@@ -18,11 +21,18 @@ fn main() {
         .run();
 }
 
+struct Circle {
+    pub position: Vec2,
+    pub r: f32,
+    pub color: Srgba<u8>,
+}
+
 struct Model {
     noise: NoiceAlgo,
     particles: Vec<Particle>,
     size: Vec2,
     p: Rect,
+    explosions: Vec<Circle>,
 }
 
 fn model(app: &App) -> Model {
@@ -43,6 +53,7 @@ fn model(app: &App) -> Model {
         size,
         particles,
         p: Rect::from_w_h(0., 0.),
+        explosions: vec![],
     }
 }
 
@@ -77,17 +88,35 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     for particle in model.particles.iter_mut() {
         particle.update();
         if particle.location().y < r.bottom() {
+            let mut color = particle.color();
+            color.alpha = 100;
+            model.explosions.push(Circle {
+                position: particle.location(),
+                r: 5.,
+                color,
+            });
             let p = new_random_particle(model.size);
             particle.set_color(p.color());
             particle.set_location(p.location());
             particle.set_velocity(p.velocity())
         }
     }
+    model.explosions.drain_filter(|v| {
+        v.r > 40.
+    });
+    model.explosions.iter_mut().for_each(|v| {
+        v.r += 3. / app.time;
+        v.color.alpha -= 20;
+    })
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     frame.clear(BLACK);
+
+    for explosion in model.explosions.iter() {
+        draw.ellipse().xy(explosion.position).radius(explosion.r).color(explosion.color);
+    }
     for particle in model.particles.iter() {
         particle.display(&draw);
     }
