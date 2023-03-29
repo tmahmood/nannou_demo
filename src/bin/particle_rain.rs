@@ -9,8 +9,8 @@ use nannou_utils::{draw_background_grid, get_random_blue, get_random_color, get_
 use nannou_utils::particle::Particle;
 //use ;
 
-const PARTICLE_COUNT: usize = 5000;
-const PLATFORM_COUNT: usize = 1;
+const PARTICLE_COUNT: usize = 1000;
+const PLATFORM_COUNT: usize = 0;
 
 const SPEED: f64 = 0.5;
 
@@ -133,20 +133,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         v.color.alpha < 20
     });
     model.explosions.iter_mut().for_each(|v| {
-        v.r += 3. / app.time;
+        v.r += 0.8;
         v.color.alpha -= 5;
     });
-    let sine = app.time.sin();
-    let slower_sine =  (app.time / 2.0).sin();
-    model.platforms.par_iter_mut().for_each(|p| {
-        // Map the sine wave functions to ranges between the boundaries of the window
-        let x = map_range(sine, -1.0, 1.0, r.left(), r.right());
-        let y = map_range(slower_sine, -1.0, 1.0, r.bottom(), r.top());
-        let rt_x = x;
-        let rt_y = y;
-        let r = Rect::from_x_y_w_h(rt_x, rt_y, p.rect.w(), p.rect.h());
-        p.rect = r;
-    })
 }
 
 fn update_particle(particle: &mut Particle, explosions: &mut Vec<Circle>, size: Vec2) {
