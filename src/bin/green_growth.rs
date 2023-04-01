@@ -1,12 +1,12 @@
 use nannou::noise::*;
 use nannou::prelude::*;
-use nannou_utils::get_random_green;
+use nannou_utils::{draw_soft_bg, get_random_green};
 
 const DISC_COUNT: usize = 5000;
 
 const SPEED: f64 = 0.5;
 
-type NoiceAlgo = Perlin;
+type NoiseAlgo = Perlin;
 
 fn main() {
     nannou::app(model)
@@ -17,7 +17,7 @@ fn main() {
 
 
 //Find the curl of the noise field based on on the noise value at the location of a disc
-fn compute_curl(noise: &NoiceAlgo, x: f64, y: f64) -> [f32; 2] {
+fn compute_curl(noise: &NoiseAlgo, x: f64, y: f64) -> [f32; 2] {
     let eps = 0.01;
     //Find rate of change in X direction
     let n1 = noise.get([x + eps, y]);
@@ -41,7 +41,7 @@ struct Curve {
 }
 
 impl Curve {
-    pub fn get_a_curve(&self, noise: &NoiceAlgo) -> Vec<(Point2, Srgba<u8>)> {
+    pub fn get_a_curve(&self, noise: &NoiseAlgo) -> Vec<(Point2, Srgba<u8>)> {
         let mut positions = vec![(Point2::new(self.start_x as f32, self.start_y as f32), self.color)];
         let mut c = self.color;
         for ii in 0..15 {
@@ -57,7 +57,7 @@ impl Curve {
 struct Model {
     discs: Vec<Curve>,
     poly_points: Vec<Vec<(Point2, Srgba<u8>)>>,
-    noise: NoiceAlgo,
+    noise: NoiseAlgo,
     size: Vec2,
 }
 
@@ -75,7 +75,8 @@ fn model(app: &App) -> Model {
         .unwrap();
 
     let size = Vec2::new(512., 512.);
-    let simplex = NoiceAlgo::new();
+    let mut simplex = NoiseAlgo::new();
+    simplex.set_seed(random());
     let (discs, poly_points) = prepare_drawing_things(&simplex,  size.clone());
     Model { discs, poly_points, noise: simplex, size}
 }
@@ -88,7 +89,7 @@ fn on_resize(_app: &App, model: &mut Model, new_size: Vec2) {
 
 }
 
-fn prepare_drawing_things(noise: &NoiceAlgo, new_size: Vec2) -> (Vec<Curve>, Vec<Vec<(Point2, Srgba<u8>)>>) {
+fn prepare_drawing_things(noise: &NoiseAlgo, new_size: Vec2) -> (Vec<Curve>, Vec<Vec<(Point2, Srgba<u8>)>>) {
     let mut discs = vec![];
     let mut poly_points = vec![];
     for ii in 0..DISC_COUNT {
@@ -114,6 +115,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
+    draw_soft_bg(&draw, app, BLACK, 0.01);
     //draw_background_grid(app, &draw);
     //draw.background().color(BLACK);
     for poly_point in model.poly_points.iter() {

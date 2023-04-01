@@ -1,7 +1,14 @@
+use nannou::color::IntoLinSrgba;
+use nannou::draw::properties::ColorScalar;
 use nannou::prelude::*;
 
 pub mod particle;
 pub mod ca;
+
+pub type C8 = Srgba<u8>;
+pub type CF32 = Srgba<f32>;
+pub type CPt = Vec<(Vec2, C8)>;
+pub type Pt = Vec<Vec2>;
 
 pub const GREEN_PALATE: [Srgb<u8>; 7] = [
     GREEN, GREENYELLOW, DARKOLIVEGREEN, DARKSEAGREEN, FORESTGREEN, MEDIUMSEAGREEN, MEDIUMSPRINGGREEN
@@ -19,19 +26,36 @@ pub const RETRO_PALETTE: [(u8, u8, u8); 4] = [
     (113, 201, 206),
 ];
 
+pub const NIGHT_PALETTE: [(u8, u8, u8); 4] = [
+    (27, 38, 44),
+    (15, 76, 117),
+    (50, 130, 184),
+    (27, 36, 48),
+];
+
 pub fn get_from_palate(p: Vec<Srgb<u8>>, alpha: Option<u8>) -> Srgba<u8> {
     let i = random_range(0, p.len() - 1);
     let c: (u8, u8, u8) = p[i].into();
     let a = if alpha.is_some() { alpha.unwrap() } else { 240 };
-    Srgba::new(c.0, c.1, c.2, a)
+    srgba8_t(c, a)
+}
+
+pub fn srgba8_t((r, g, b): (u8, u8, u8), a: u8) -> C8  {
+    srgba8(r, g, b, a)
+}
+
+pub fn get_random_from_palette(palette: Vec<(u8, u8, u8)>, alpha: Option<u8>) -> C8 {
+    let i = random_range(0, palette.len() - 1);
+
+    srgba8_t(palette[i], if alpha.is_some() { alpha.unwrap() } else { 240 })
+}
+
+pub fn get_random_night(alpha: Option<u8>) -> Srgba<u8> {
+    get_random_from_palette(NIGHT_PALETTE.to_vec(), alpha)
 }
 
 pub fn get_random_retro(alpha: Option<u8>) -> Srgba<u8> {
-    let mut v = vec![];
-    for (r, g, b) in RETRO_PALETTE.to_vec().iter() {
-        v.push(srgb(*r, *g, *b))
-    }
-    get_from_palate(v, alpha)
+    get_random_from_palette(RETRO_PALETTE.to_vec(), alpha)
 }
 
 pub fn get_random_green(alpha: Option<u8>) -> Srgba<u8> {
@@ -44,6 +68,19 @@ pub fn get_random_blue(alpha: Option<u8>) -> Srgba<u8> {
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
+}
+
+
+pub fn draw_soft_bg(draw: &Draw, app: &App, color: impl IntoLinSrgba<ColorScalar>, alpha: f32) {
+    if app.elapsed_frames() <= 1 {
+        draw.background().color(color);
+    } else {
+        let mut color = color.into_lin_srgba();
+        color.alpha = alpha;
+
+        let win = app.window_rect();
+        draw.rect().wh(win.wh()).color(color);
+    }
 }
 
 
@@ -179,11 +216,33 @@ pub fn get_random_position(size: Vec2) -> Vec2 {
     )
 }
 
-pub fn get_random_color() -> Srgba<u8> {
+pub fn get_random_color() -> C8 {
     let r = random_range(0, 255);
     let g = random_range(0, 255);
     let b = random_range(0, 255);
     Srgba::new(r, g, b, 255)
+}
+
+pub fn poly_shapes_colored(r: f32, c: C8, angle: usize) -> CPt {
+    (0..=360).step_by(angle).map(|i| {
+        let radian = deg_to_rad(i as f32);
+        let x = radian.sin() * r;
+        let y = radian.cos() * r;
+        (pt2(x,y), c)
+    }).collect()
+}
+
+pub fn poly_shapes(r: f32, c: C8, angle: usize) -> Pt {
+    (0..=360).step_by(angle).map(|i| {
+        let radian = deg_to_rad(i as f32);
+        let x = radian.sin() * r;
+        let y = radian.cos() * r;
+        pt2(x,y)
+    }).collect()
+}
+
+pub fn map_sin(v: f32, out_min: f32, out_max: f32) -> f32 {
+    map_range(v.sin(), -1., 1., out_min, out_max)
 }
 
 #[cfg(test)]
